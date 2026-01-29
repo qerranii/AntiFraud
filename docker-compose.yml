@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  antifraud-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: antifraud-app
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    environment:
+      - ADMIN_EMAIL=admin@mail.ru
+      - ADMIN_FULLNAME=Test Test
+      - ADMIN_PASSWORD=123123123aA!
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=testdb
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - RANDOM_SECRET=Jf/ZpZSxfMWnOexP48Mp1z200jd+8BVZ7ws6Uw5Jp/w=
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - antifraud-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: antifraud-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - antifraud-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: antifraud-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - antifraud-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  antifraud-network:
+    driver: bridge
