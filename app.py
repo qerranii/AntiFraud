@@ -23,11 +23,9 @@ from datetime import datetime, timezone
 
 from endpoints.transaction import router as trans_router
 from utils.security import hash_password
+from prometheus_fastapi_instrumentator import Instrumentator
 
 #!!!! meow
-
-
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,6 +50,11 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+instrumentator = Instrumentator().instrument(app)
+
+@app.on_event("startup")
+async def startup_event():
+    instrumentator.expose(app)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
