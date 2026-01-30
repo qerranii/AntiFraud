@@ -50,11 +50,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-instrumentator = Instrumentator().instrument(app)
-
-@app.on_event("startup")
-async def startup_event():
-    instrumentator.expose(app)
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
